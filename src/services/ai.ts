@@ -10,41 +10,155 @@ interface GenerateLyricsParams {
   sections: SongSection[];
 }
 
-interface GenerateSectionParams {
-  theme: string;
-  mood: string;
-  genre: string;
-  rhymeScheme: string;
-  syllablesPerLine: number | null;
-  wordsPerLine: number | null;
-  sectionType: SongSection['type'];
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+export async function generateLyrics(params: GenerateLyricsParams): Promise<SongSection[]> {
+  if (!GEMINI_API_KEY) {
+    console.warn('Gemini API key not found, using placeholder lyrics');
+    return generatePlaceholderLyrics(params);
+  }
+
+  try {
+    const prompt = buildLyricsPrompt(params);
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.9,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Gemini API error:', error);
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!generatedText) {
+      throw new Error('No text generated');
+    }
+
+    return parseLyricsResponse(generatedText, params.sections);
+  } catch (error) {
+    console.error('Failed to generate lyrics:', error);
+    return generatePlaceholderLyrics(params);
+  }
 }
 
-// This will be replaced with actual API calls
-// For now, returns placeholder text to demonstrate the UI
-export async function generateLyrics(params: GenerateLyricsParams): Promise<SongSection[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+function buildLyricsPrompt(params: GenerateLyricsParams): string {
+  const sectionDescriptions = params.sections.map((s, i) => `${i + 1}. ${s.type}`).join('\n');
 
+  return `You are a professional songwriter. Write song lyrics with these specifications:
+
+Theme: ${params.theme || 'love and life'}
+Mood: ${params.mood || 'emotional'}
+Genre: ${params.genre || 'pop'}
+Rhyme Scheme: ${params.rhymeScheme || 'ABAB'}
+${params.syllablesPerLine ? `Target syllables per line: approximately ${params.syllablesPerLine}` : ''}
+${params.wordsPerLine ? `Target words per line: approximately ${params.wordsPerLine}` : ''}
+
+Song structure:
+${sectionDescriptions}
+
+IMPORTANT: Format your response EXACTLY like this, with each section clearly labeled:
+
+[VERSE]
+Line 1 of verse
+Line 2 of verse
+Line 3 of verse
+Line 4 of verse
+
+[CHORUS]
+Line 1 of chorus
+Line 2 of chorus
+Line 3 of chorus
+Line 4 of chorus
+
+[BRIDGE]
+Line 1 of bridge
+Line 2 of bridge
+
+Use the section types: INTRO, VERSE, CHORUS, BRIDGE, OUTRO
+Each section should have 2-4 lines appropriate for its type.
+Make the lyrics emotionally resonant, creative, and fitting for the specified genre and mood.
+Follow the rhyme scheme as closely as possible.`;
+}
+
+function parseLyricsResponse(text: string, sections: SongSection[]): SongSection[] {
+  const sectionRegex = /\[(INTRO|VERSE|CHORUS|BRIDGE|OUTRO)\]\s*([\s\S]*?)(?=\[(?:INTRO|VERSE|CHORUS|BRIDGE|OUTRO)\]|$)/gi;
+  const parsedSections: Map<string, string[][]> = new Map();
+
+  let match;
+  while ((match = sectionRegex.exec(text)) !== null) {
+    const sectionType = match[1].toLowerCase() as SongSection['type'];
+    const lines = match[2]
+      .trim()
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    if (!parsedSections.has(sectionType)) {
+      parsedSections.set(sectionType, []);
+    }
+    parsedSections.get(sectionType)!.push(lines);
+  }
+
+  // Map parsed lyrics back to original sections
+  const sectionCounters: Map<string, number> = new Map();
+
+  return sections.map(section => {
+    const count = sectionCounters.get(section.type) || 0;
+    sectionCounters.set(section.type, count + 1);
+
+    const availableLyrics = parsedSections.get(section.type);
+    const lyrics = availableLyrics?.[count] || availableLyrics?.[0];
+
+    return {
+      ...section,
+      lines: lyrics || getDefaultLines(section.type),
+    };
+  });
+}
+
+function getDefaultLines(sectionType: SongSection['type']): string[] {
+  const defaults: Record<string, string[]> = {
+    intro: ['[Intro instrumental]'],
+    verse: ['[Verse lyrics]', '[Verse lyrics]', '[Verse lyrics]', '[Verse lyrics]'],
+    chorus: ['[Chorus lyrics]', '[Chorus lyrics]', '[Chorus lyrics]', '[Chorus lyrics]'],
+    bridge: ['[Bridge lyrics]', '[Bridge lyrics]'],
+    outro: ['[Outro...]'],
+  };
+  return defaults[sectionType] || ['[Lyrics]'];
+}
+
+function generatePlaceholderLyrics(params: GenerateLyricsParams): SongSection[] {
   return params.sections.map((section) => ({
     ...section,
-    lines: generatePlaceholderLyrics(section.type, params),
+    lines: getPlaceholderLines(section.type, params),
   }));
 }
 
-export async function generateSectionLyrics(params: GenerateSectionParams): Promise<string[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  return generatePlaceholderLyrics(params.sectionType, params);
-}
-
-function generatePlaceholderLyrics(
+function getPlaceholderLines(
   sectionType: SongSection['type'],
-  params: { theme: string; mood: string; syllablesPerLine: number | null }
+  params: { theme: string; mood: string }
 ): string[] {
-  const lineCount = sectionType === 'chorus' ? 4 : sectionType === 'bridge' ? 2 : sectionType === 'intro' || sectionType === 'outro' ? 2 : 4;
-
   const placeholders: Record<string, string[]> = {
     intro: [
       `Here begins a tale of ${params.theme || 'dreams'}`,
@@ -72,30 +186,5 @@ function generatePlaceholderLyrics(
     ],
   };
 
-  return placeholders[sectionType]?.slice(0, lineCount) || [`[${sectionType} lyrics]`];
-}
-
-// Build the prompt for the AI
-export function buildLyricsPrompt(params: GenerateLyricsParams): string {
-  let prompt = `Write song lyrics with the following specifications:\n\n`;
-  prompt += `Theme: ${params.theme || 'any'}\n`;
-  prompt += `Mood: ${params.mood || 'any'}\n`;
-  prompt += `Genre: ${params.genre || 'any'}\n`;
-  prompt += `Rhyme Scheme: ${params.rhymeScheme || 'free verse'}\n`;
-
-  if (params.syllablesPerLine) {
-    prompt += `Target syllables per line: ${params.syllablesPerLine}\n`;
-  }
-  if (params.wordsPerLine) {
-    prompt += `Target words per line: ${params.wordsPerLine}\n`;
-  }
-
-  prompt += `\nSong structure:\n`;
-  params.sections.forEach((section, index) => {
-    prompt += `${index + 1}. ${section.type}\n`;
-  });
-
-  prompt += `\nPlease write appropriate lyrics for each section, following the rhyme scheme and syllable/word constraints as closely as possible.`;
-
-  return prompt;
+  return placeholders[sectionType] || [`[${sectionType} lyrics]`];
 }
