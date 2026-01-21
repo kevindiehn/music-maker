@@ -263,6 +263,7 @@ function App() {
                 notes={melodyNotes}
                 onChange={setMelodyNotes}
                 bars={melodyBars}
+                lyrics={lyricsState.sections}
               />
             </div>
 

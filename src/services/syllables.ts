@@ -15,3 +15,11 @@ export function countWords(text: string): number {
 export function countWordsPerLine(lines: string[]): number[] {
   return lines.map((line) => countWords(line));
 }
+
+export function splitIntoWords(text: string): string[] {
+  return text.trim().split(/\s+/).filter(Boolean);
+}
+
+export function extractAllWords(lines: string[]): string[] {
+  return lines.flatMap((line) => splitIntoWords(line));
+}

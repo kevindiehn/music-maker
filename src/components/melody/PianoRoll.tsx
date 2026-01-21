@@ -1,9 +1,11 @@
-import type { Note } from '../../types';
+import type { Note, SongSection } from '../../types';
+import { extractAllWords } from '../../services/syllables';
 
 interface PianoRollProps {
   notes: Note[];
   onChange: (notes: Note[]) => void;
   bars?: number;
+  lyrics?: SongSection[];
 }
 
 const PIANO_NOTES = [
@@ -13,11 +15,29 @@ const PIANO_NOTES = [
 
 const isBlackKey = (note: string) => note.includes('#');
 
-export function PianoRoll({ notes, onChange, bars = 4 }: PianoRollProps) {
+export function PianoRoll({ notes, onChange, bars = 4, lyrics = [] }: PianoRollProps) {
   const beatsPerBar = 4;
   const totalBeats = bars * beatsPerBar;
   const subdivisions = 4; // 16th notes
   const totalCells = totalBeats * subdivisions;
+
+  // Extract all words from lyrics and sort notes by time for mapping
+  const allWords = lyrics.flatMap((section) => extractAllWords(section.lines));
+  const sortedNotes = [...notes].sort((a, b) => {
+    const parseTime = (t: string) => {
+      const [bar, beat, sixteenth] = t.split(':').map(Number);
+      return bar * 16 + beat * 4 + sixteenth;
+    };
+    return parseTime(a.startTime) - parseTime(b.startTime);
+  });
+
+  // Create a map of startTime -> word for display
+  const noteToWord = new Map<string, string>();
+  sortedNotes.forEach((note, index) => {
+    if (index < allWords.length) {
+      noteToWord.set(`${note.pitch}-${note.startTime}`, allWords[index]);
+    }
+  });
 
   const toggleNote = (pitch: string, cellIndex: number) => {
     const startTime = `0:${Math.floor(cellIndex / subdivisions)}:${(cellIndex % subdivisions) * (subdivisions / 4)}`;
@@ -99,6 +119,49 @@ export function PianoRoll({ notes, onChange, bars = 4 }: PianoRollProps) {
             })}
           </div>
         ))}
+
+        {/* Lyrics row */}
+        {allWords.length > 0 && (
+          <div className="flex border-t-2 border-indigo-500 mt-1">
+            <div className="w-12 shrink-0 px-1 py-1 text-xs text-gray-400 border-r border-gray-600 bg-gray-800">
+              Lyrics
+            </div>
+            {Array.from({ length: totalCells }).map((_, cellIndex) => {
+              const startTime = `0:${Math.floor(cellIndex / subdivisions)}:${(cellIndex % subdivisions) * (subdivisions / 4)}`;
+              // Find if any note at this cell has a word
+              const wordAtCell = PIANO_NOTES.map((pitch) =>
+                noteToWord.get(`${pitch}-${startTime}`)
+              ).find(Boolean);
+              const isBarStart = cellIndex % (beatsPerBar * subdivisions) === 0;
+
+              return (
+                <div
+                  key={cellIndex}
+                  className={`w-5 h-6 flex items-center justify-center text-[9px] overflow-hidden ${
+                    isBarStart ? 'border-l-2 border-l-gray-500' : 'border-l border-l-gray-700/50'
+                  } ${wordAtCell ? 'bg-indigo-900/50 text-indigo-300' : 'bg-gray-800/50'}`}
+                  title={wordAtCell || ''}
+                >
+                  {wordAtCell && (
+                    <span className="truncate px-0.5">{wordAtCell}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Lyrics summary */}
+        {allWords.length > 0 && (
+          <div className="mt-2 px-2 py-1 bg-gray-800 rounded text-xs text-gray-400">
+            {allWords.length} words • {notes.length} notes
+            {allWords.length !== notes.length && (
+              <span className="text-yellow-500 ml-2">
+                ({allWords.length > notes.length ? `${allWords.length - notes.length} more words than notes` : `${notes.length - allWords.length} more notes than words`})
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
