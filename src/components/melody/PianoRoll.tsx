@@ -31,14 +31,6 @@ export function PianoRoll({ notes, onChange, bars = 4, lyrics = [] }: PianoRollP
     return parseTime(a.startTime) - parseTime(b.startTime);
   });
 
-  // Create a map of startTime -> word for display
-  const noteToWord = new Map<string, string>();
-  sortedNotes.forEach((note, index) => {
-    if (index < allWords.length) {
-      noteToWord.set(`${note.pitch}-${note.startTime}`, allWords[index]);
-    }
-  });
-
   const toggleNote = (pitch: string, cellIndex: number) => {
     const startTime = `0:${Math.floor(cellIndex / subdivisions)}:${(cellIndex % subdivisions) * (subdivisions / 4)}`;
     const existingIndex = notes.findIndex(
@@ -119,50 +111,52 @@ export function PianoRoll({ notes, onChange, bars = 4, lyrics = [] }: PianoRollP
             })}
           </div>
         ))}
+      </div>
 
-        {/* Lyrics row */}
-        {allWords.length > 0 && (
-          <div className="flex border-t-2 border-indigo-500 mt-1">
-            <div className="w-12 shrink-0 px-1 py-1 text-xs text-gray-400 border-r border-gray-600 bg-gray-800">
-              Lyrics
-            </div>
-            {Array.from({ length: totalCells }).map((_, cellIndex) => {
-              const startTime = `0:${Math.floor(cellIndex / subdivisions)}:${(cellIndex % subdivisions) * (subdivisions / 4)}`;
-              // Find if any note at this cell has a word
-              const wordAtCell = PIANO_NOTES.map((pitch) =>
-                noteToWord.get(`${pitch}-${startTime}`)
-              ).find(Boolean);
-              const isBarStart = cellIndex % (beatsPerBar * subdivisions) === 0;
-
+      {/* Lyrics display - readable word chips */}
+      {allWords.length > 0 && (
+        <div className="mt-3 p-3 bg-gray-800 rounded-lg border border-indigo-500/30">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-indigo-400">Lyrics → Notes</span>
+            <span className="text-xs text-gray-500">
+              {allWords.length} words • {notes.length} notes
+              {allWords.length !== notes.length && (
+                <span className="text-yellow-500 ml-1">
+                  ({allWords.length > notes.length ? `+${allWords.length - notes.length} words` : `+${notes.length - allWords.length} notes`})
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {sortedNotes.map((note, index) => {
+              const word = allWords[index];
               return (
                 <div
-                  key={cellIndex}
-                  className={`w-5 h-6 flex items-center justify-center text-[9px] overflow-hidden ${
-                    isBarStart ? 'border-l-2 border-l-gray-500' : 'border-l border-l-gray-700/50'
-                  } ${wordAtCell ? 'bg-indigo-900/50 text-indigo-300' : 'bg-gray-800/50'}`}
-                  title={wordAtCell || ''}
+                  key={`${note.startTime}-${note.pitch}`}
+                  className={`px-2 py-1 rounded text-xs ${
+                    word
+                      ? 'bg-indigo-600/40 text-indigo-200 border border-indigo-500/50'
+                      : 'bg-gray-700/50 text-gray-500 border border-gray-600/50'
+                  }`}
+                  title={`${note.pitch} at ${note.startTime}`}
                 >
-                  {wordAtCell && (
-                    <span className="truncate px-0.5">{wordAtCell}</span>
-                  )}
+                  {word || '♪'}
                 </div>
               );
             })}
+            {/* Show remaining words that don't have notes */}
+            {allWords.slice(notes.length).map((word, index) => (
+              <div
+                key={`extra-${index}`}
+                className="px-2 py-1 rounded text-xs bg-yellow-600/30 text-yellow-300 border border-yellow-500/50"
+                title="No note assigned"
+              >
+                {word}
+              </div>
+            ))}
           </div>
-        )}
-
-        {/* Lyrics summary */}
-        {allWords.length > 0 && (
-          <div className="mt-2 px-2 py-1 bg-gray-800 rounded text-xs text-gray-400">
-            {allWords.length} words • {notes.length} notes
-            {allWords.length !== notes.length && (
-              <span className="text-yellow-500 ml-2">
-                ({allWords.length > notes.length ? `${allWords.length - notes.length} more words than notes` : `${notes.length - allWords.length} more notes than words`})
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

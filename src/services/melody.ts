@@ -27,8 +27,11 @@ export function generateMelody(params: GenerateMelodyParams): Note[] {
 
   // Generate notes following the rhythm and contour
   let currentPosition = 0;
+  let prevScaleIndex = Math.floor(scaleNotes.length / 2); // Start in middle of scale
+
   rhythmPattern.forEach((duration, index) => {
-    const pitch = selectPitch(scaleNotes, index, rhythmPattern.length, contour);
+    const { pitch, scaleIndex } = selectPitch(scaleNotes, index, rhythmPattern.length, contour, prevScaleIndex);
+    prevScaleIndex = scaleIndex;
     notes.push({
       pitch,
       duration: durationToToneNotation(duration),
@@ -59,9 +62,24 @@ function generateDefaultRhythm(totalBeats: number): number[] {
   let remaining = totalBeats * 4; // Convert to 16th notes
 
   while (remaining > 0) {
-    // Randomly choose note duration (1=16th, 2=8th, 4=quarter, 8=half)
-    const possibleDurations = [1, 2, 4].filter((d) => d <= remaining);
-    const duration = possibleDurations[Math.floor(Math.random() * possibleDurations.length)];
+    // Weighted random: favor 8th notes (2) for more melodic feel
+    // Weights: 16th=15%, 8th=50%, quarter=30%, half=5%
+    const roll = Math.random();
+    let duration: number;
+    if (roll < 0.15 && remaining >= 1) {
+      duration = 1; // 16th note
+    } else if (roll < 0.65 && remaining >= 2) {
+      duration = 2; // 8th note
+    } else if (roll < 0.95 && remaining >= 4) {
+      duration = 4; // quarter note
+    } else if (remaining >= 2) {
+      duration = 2; // default to 8th
+    } else {
+      duration = 1; // fill with 16th
+    }
+
+    // Ensure we don't exceed remaining
+    duration = Math.min(duration, remaining);
     rhythm.push(duration);
     remaining -= duration;
   }
@@ -78,9 +96,9 @@ function selectPitch(
   scaleNotes: string[],
   noteIndex: number,
   totalNotes: number,
-  contour: ContourType
-): string {
-  const octaves = [3, 4, 5];
+  contour: ContourType,
+  prevScaleIndex: number
+): { pitch: string; scaleIndex: number } {
   const progress = noteIndex / totalNotes;
 
   let scaleIndex: number;
@@ -105,26 +123,24 @@ function selectPitch(
       );
       break;
     case 'random':
-    default:
-      // Favor stepwise motion with occasional leaps
-      if (noteIndex === 0) {
-        scaleIndex = Math.floor(scaleNotes.length / 2);
-      } else {
-        const prevIndex = Math.floor(Math.random() * scaleNotes.length);
-        const step = Math.random() < 0.7
-          ? (Math.random() < 0.5 ? -1 : 1) // stepwise
-          : Math.floor(Math.random() * 3) - 1; // leap
-        scaleIndex = Math.max(0, Math.min(scaleNotes.length - 1, prevIndex + step));
-      }
+    default: {
+      // Favor stepwise motion with occasional leaps, using actual previous index
+      const step = Math.random() < 0.7
+        ? (Math.random() < 0.5 ? -1 : 1) // stepwise (70%)
+        : (Math.random() < 0.5 ? -2 : 2); // small leap (30%)
+      scaleIndex = Math.max(0, Math.min(scaleNotes.length - 1, prevScaleIndex + step));
+      break;
+    }
   }
 
   const note = scaleNotes[scaleIndex];
-  const octave = octaves[1]; // Default to octave 4
 
-  // Adjust octave based on position for variety
-  const octaveAdjust = progress < 0.3 ? 0 : progress > 0.7 ? 0 : 0;
+  // Vary octave based on scale position for more range
+  let octave = 4;
+  if (scaleIndex < 2) octave = 3;
+  else if (scaleIndex > scaleNotes.length - 3) octave = 5;
 
-  return `${note}${octave + octaveAdjust}`;
+  return { pitch: `${note}${octave}`, scaleIndex };
 }
 
 function durationToToneNotation(sixteenths: number): string {

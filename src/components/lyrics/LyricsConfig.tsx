@@ -9,8 +9,8 @@ interface LyricsConfigProps {
   onChange: (config: LyricsConfigProps['config']) => void;
 }
 
-const MOODS = ['Happy', 'Sad', 'Energetic', 'Melancholic', 'Romantic', 'Angry', 'Peaceful', 'Nostalgic'];
-const GENRES = ['Pop', 'Rock', 'Hip-Hop', 'Country', 'R&B', 'Folk', 'Jazz', 'Electronic'];
+const MOODS = ['Happy', 'Sad', 'Energetic', 'Melancholic', 'Romantic', 'Angry', 'Peaceful', 'Nostalgic', 'Hopeful', 'Defiant', 'Chill'];
+const GENRES = ['Pop', 'Rock', 'Hip-Hop', 'Country', 'R&B', 'Folk', 'Jazz', 'Electronic', 'Reggae', 'Soul', 'Indie'];
 
 export function LyricsConfig({ config, onChange }: LyricsConfigProps) {
   const updateField = <K extends keyof typeof config>(field: K, value: typeof config[K]) => {
@@ -37,16 +37,19 @@ export function LyricsConfig({ config, onChange }: LyricsConfigProps) {
           <label className="block text-sm font-medium text-gray-300 mb-1">
             Mood
           </label>
-          <select
+          <input
+            type="text"
+            list="mood-options"
             value={config.mood}
             onChange={(e) => updateField('mood', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-          >
-            <option value="">Select mood...</option>
+            placeholder="Type or select a mood..."
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
+          />
+          <datalist id="mood-options">
             {MOODS.map((mood) => (
-              <option key={mood} value={mood.toLowerCase()}>{mood}</option>
+              <option key={mood} value={mood.toLowerCase()} />
             ))}
-          </select>
+          </datalist>
         </div>
 
         <div>

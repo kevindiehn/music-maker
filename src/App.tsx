@@ -144,20 +144,21 @@ function App() {
         <h1 className="text-2xl font-bold text-center">Music Maker</h1>
       </header>
 
-      <nav className="bg-gray-800 border-b border-gray-700">
-        <div className="flex justify-center gap-1 p-2">
+      <nav className="bg-gray-800 border-b border-gray-700 overflow-x-auto">
+        <div className="flex justify-start sm:justify-center gap-1 p-2 min-w-max">
           {steps.map((step, index) => (
             <button
               key={step.id}
               onClick={() => setCurrentStep(step.id)}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-sm sm:text-base ${
                 currentStep === step.id
                   ? 'bg-indigo-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
-              <span className="mr-2">{index + 1}.</span>
-              {step.label}
+              <span className="sm:mr-2">{index + 1}.</span>
+              <span className="hidden sm:inline">{step.label}</span>
+              <span className="sm:hidden">{step.label.slice(0, 3)}</span>
             </button>
           ))}
         </div>

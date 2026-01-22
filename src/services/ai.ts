@@ -65,40 +65,44 @@ export async function generateLyrics(params: GenerateLyricsParams): Promise<Song
 function buildLyricsPrompt(params: GenerateLyricsParams): string {
   const sectionDescriptions = params.sections.map((s, i) => `${i + 1}. ${s.type}`).join('\n');
 
-  return `You are a professional songwriter. Write song lyrics with these specifications:
+  return `You are a Grammy-winning songwriter known for vivid imagery and authentic emotion. Write original song lyrics.
 
-Theme: ${params.theme || 'love and life'}
-Mood: ${params.mood || 'emotional'}
-Genre: ${params.genre || 'pop'}
-Rhyme Scheme: ${params.rhymeScheme || 'ABAB'}
-${params.syllablesPerLine ? `Target syllables per line: approximately ${params.syllablesPerLine}` : ''}
-${params.wordsPerLine ? `Target words per line: approximately ${params.wordsPerLine}` : ''}
+CREATIVE DIRECTION:
+- Theme: ${params.theme || 'love and life'}
+- Mood: ${params.mood || 'emotional'}
+- Genre: ${params.genre || 'pop'}
+- Rhyme Scheme: ${params.rhymeScheme || 'ABAB'}
+${params.syllablesPerLine ? `- Target syllables per line: ~${params.syllablesPerLine}` : ''}
+${params.wordsPerLine ? `- Target words per line: ~${params.wordsPerLine}` : ''}
+
+QUALITY GUIDELINES:
+- Use specific, concrete imagery instead of generic phrases (not "I feel sad" but "these four walls close in")
+- Include sensory details: sights, sounds, textures, smells
+- Vary sentence structure - mix short punchy lines with flowing ones
+- Avoid clichés like "heart on my sleeve", "tears fall like rain", "you complete me"
+- Make the chorus memorable and singable with a strong hook
+- Each verse should advance the story or perspective
+- Use metaphors and wordplay appropriate to the genre
 
 Song structure:
 ${sectionDescriptions}
 
-IMPORTANT: Format your response EXACTLY like this, with each section clearly labeled:
+FORMAT (follow exactly):
 
 [VERSE]
-Line 1 of verse
-Line 2 of verse
-Line 3 of verse
-Line 4 of verse
+Line 1
+Line 2
+Line 3
+Line 4
 
 [CHORUS]
-Line 1 of chorus
-Line 2 of chorus
-Line 3 of chorus
-Line 4 of chorus
+Line 1
+Line 2
+Line 3
+Line 4
 
-[BRIDGE]
-Line 1 of bridge
-Line 2 of bridge
-
-Use the section types: INTRO, VERSE, CHORUS, BRIDGE, OUTRO
-Each section should have 2-4 lines appropriate for its type.
-Make the lyrics emotionally resonant, creative, and fitting for the specified genre and mood.
-Follow the rhyme scheme as closely as possible.`;
+Use section types: INTRO, VERSE, CHORUS, BRIDGE, OUTRO
+Write 2-4 lines per section. Make every word count.`;
 }
 
 function parseLyricsResponse(text: string, sections: SongSection[]): SongSection[] {
