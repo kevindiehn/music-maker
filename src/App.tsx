@@ -7,6 +7,7 @@ import { StructureBuilder } from './components/lyrics/StructureBuilder'
 import { LyricsEditor } from './components/lyrics/LyricsEditor'
 import { MelodyConfig } from './components/melody/MelodyConfig'
 import { PianoRoll } from './components/melody/PianoRoll'
+import { NotationView } from './components/melody/NotationView'
 import { PlaybackControls } from './components/shared/PlaybackControls'
 import { ProgressionPicker } from './components/harmony/ProgressionPicker'
 import { ChordDisplay } from './components/harmony/ChordDisplay'
@@ -15,6 +16,7 @@ import { Mixer } from './components/instruments/Mixer'
 import { ExportPanel } from './components/export/ExportPanel'
 import type { ProjectData } from './services/export'
 import { generateLyrics } from './services/ai'
+import { generateEnhancedLyrics } from './services/enhanced-ai'
 import { generateMelody } from './services/melody'
 import { generateHarmony } from './services/harmony'
 import { useAudio } from './hooks/useAudio'
@@ -78,7 +80,17 @@ function App() {
 
     setIsGenerating(true)
     try {
-      const generatedSections = await generateLyrics(lyricsState)
+      // Use enhanced AI if melody is available, otherwise fallback to original
+      const generatedSections = melodyNotes.length > 0 
+        ? await generateEnhancedLyrics({
+            ...lyricsState,
+            melody: melodyNotes,
+            key: melodyConfig.key,
+            scale: melodyConfig.scale,
+            tempo: melodyConfig.tempo,
+          })
+        : await generateLyrics(lyricsState)
+      
       setLyricsState((prev) => ({ ...prev, sections: generatedSections }))
     } catch (error) {
       console.error('Failed to generate lyrics:', error)
@@ -196,14 +208,24 @@ function App() {
             </div>
 
             {lyricsState.sections.length > 0 && (
-              <div className="flex justify-center">
+              <div className="flex justify-center flex-col items-center space-y-3">
                 <button
                   onClick={handleGenerateLyrics}
                   disabled={isGenerating}
                   className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
                 >
-                  {isGenerating ? 'Generating...' : 'Generate Lyrics with AI'}
+                  {isGenerating 
+                    ? 'Generating...' 
+                    : melodyNotes.length > 0 
+                      ? '🎵 Generate Music-Aware Lyrics' 
+                      : 'Generate Lyrics with AI'
+                  }
                 </button>
+                {melodyNotes.length > 0 && (
+                  <p className="text-sm text-green-400">
+                    ✨ Enhanced mode: Using melody from {melodyNotes.length} notes to create better lyrics
+                  </p>
+                )}
               </div>
             )}
 
@@ -267,6 +289,16 @@ function App() {
                 lyrics={lyricsState.sections}
               />
             </div>
+
+            {/* Sheet Music Notation with Lyrics */}
+            {melodyNotes.length > 0 && (
+              <div className="bg-gray-800 rounded-lg p-6">
+                <NotationView
+                  notes={melodyNotes}
+                  lyrics={lyricsState.sections}
+                />
+              </div>
+            )}
 
             <div className="bg-gray-800 rounded-lg p-6">
               <div className="flex items-center justify-between">

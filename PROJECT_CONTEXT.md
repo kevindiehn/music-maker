@@ -168,9 +168,12 @@ npm run lint     # ESLint
 - [x] AI lyrics generation (when API key configured)
 - [x] Deployed to Vercel
 
-### Needs Work / Ideas
-- [ ] VexFlow notation display (imported but not integrated)
-- [ ] Lyrics-to-melody sync (rhythm from syllables)
+### Priority Improvements (Kevin's Notes Jan 26)
+- [ ] **Lyrics generator** — currently repetitive/underwhelming, needs more creativity
+- [ ] **Piano roll + lyrics display** — currently almost unreadable, want sheet-music style with lyrics underneath notes
+- [ ] **VexFlow integration** — already imported, could enable proper notation with lyrics
+
+### Other Ideas
 - [ ] More instrument sounds / custom synth presets
 - [ ] Better mobile piano roll UX
 - [ ] Undo/redo for editing
@@ -178,6 +181,7 @@ npm run lint     # ESLint
 - [ ] Arrangement timeline (multi-section composition)
 - [ ] Chord voicing options
 - [ ] Melody quantization / snap-to-grid options
+- [ ] Research other open source lyric/melody apps for inspiration
 
 ## Kevin's Goals
 
