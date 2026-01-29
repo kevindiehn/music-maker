@@ -1,5 +1,21 @@
 import type { SongSection } from '../types';
 
+// Helper functions for section numbering
+function getVerseNumber(sections: SongSection[], currentIndex: number): string {
+  const versesBeforeCurrent = sections.slice(0, currentIndex).filter(s => s.type === 'verse').length;
+  return `verse ${versesBeforeCurrent + 1}`;
+}
+
+function getSectionNumber(sections: SongSection[], currentIndex: number): string {
+  const section = sections[currentIndex];
+  const sameTypeBefore = sections.slice(0, currentIndex).filter(s => s.type === section.type).length;
+  
+  if (sameTypeBefore > 0) {
+    return `${sameTypeBefore + 1}`;
+  }
+  return '';
+}
+
 interface GenerateLyricsParams {
   theme: string;
   mood: string;
@@ -63,7 +79,10 @@ export async function generateLyrics(params: GenerateLyricsParams): Promise<Song
 }
 
 function buildLyricsPrompt(params: GenerateLyricsParams): string {
-  const sectionDescriptions = params.sections.map((s, i) => `${i + 1}. ${s.type}`).join('\n');
+  const sectionDescriptions = params.sections.map((s, i) => `${i + 1}. ${s.type}${s.type === 'verse' && params.sections.filter(sec => sec.type === 'verse').length > 1 ? ` (${getVerseNumber(params.sections, i)})` : ''}`).join('\n');
+  
+  const hasMultipleVerses = params.sections.filter(s => s.type === 'verse').length > 1;
+  const hasMultipleChorus = params.sections.filter(s => s.type === 'chorus').length > 1;
 
   return `You are a Grammy-winning songwriter known for vivid imagery and authentic emotion. Write original song lyrics.
 
@@ -84,59 +103,72 @@ QUALITY GUIDELINES:
 - Each verse should advance the story or perspective
 - Use metaphors and wordplay appropriate to the genre
 
+🚨 CRITICAL: NO REPETITION ALLOWED!
+${hasMultipleVerses ? '- Write COMPLETELY DIFFERENT verses - different scenes, perspectives, or story progression' : ''}
+${hasMultipleChorus ? '- Each chorus should have slight variations - same theme but different words/angles' : ''}
+- NEVER copy and paste lines between sections
+- Each section must tell a unique part of the story
+- Vary vocabulary, imagery, and emotional angles
+
 Song structure:
 ${sectionDescriptions}
 
 FORMAT (follow exactly):
+Write each section separately with unique content.
 
-[VERSE]
+${params.sections.map((section, index) => {
+  const sectionNumber = getSectionNumber(params.sections, index);
+  return `[${section.type.toUpperCase()}${sectionNumber}]
 Line 1
-Line 2
+Line 2  
 Line 3
-Line 4
+Line 4`;
+}).join('\n\n')}
 
-[CHORUS]
-Line 1
-Line 2
-Line 3
-Line 4
-
-Use section types: INTRO, VERSE, CHORUS, BRIDGE, OUTRO
-Write 2-4 lines per section. Make every word count.`;
+REMEMBER: Every section must be completely unique! No repeated lines or phrases!`;
 }
 
 function parseLyricsResponse(text: string, sections: SongSection[]): SongSection[] {
-  const sectionRegex = /\[(INTRO|VERSE|CHORUS|BRIDGE|OUTRO)\]\s*([\s\S]*?)(?=\[(?:INTRO|VERSE|CHORUS|BRIDGE|OUTRO)\]|$)/gi;
-  const parsedSections: Map<string, string[][]> = new Map();
+  // Updated regex to handle numbered sections like [VERSE1], [VERSE2], etc.
+  const sectionRegex = /\[(INTRO|VERSE|CHORUS|BRIDGE|OUTRO)(\d*)\]\s*([\s\S]*?)(?=\[(?:INTRO|VERSE|CHORUS|BRIDGE|OUTRO)\d*\]|$)/gi;
+  const parsedSections: { type: string; number: string; lines: string[] }[] = [];
 
   let match;
   while ((match = sectionRegex.exec(text)) !== null) {
-    const sectionType = match[1].toLowerCase() as SongSection['type'];
-    const lines = match[2]
+    const sectionType = match[1].toLowerCase();
+    const sectionNumber = match[2] || '1'; // Default to 1 if no number
+    const lines = match[3]
       .trim()
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line.length > 0);
+      .filter(line => line.length > 0 && !line.startsWith('[') && !line.startsWith('Line'));
 
-    if (!parsedSections.has(sectionType)) {
-      parsedSections.set(sectionType, []);
-    }
-    parsedSections.get(sectionType)!.push(lines);
+    parsedSections.push({
+      type: sectionType,
+      number: sectionNumber,
+      lines
+    });
   }
 
-  // Map parsed lyrics back to original sections
-  const sectionCounters: Map<string, number> = new Map();
-
-  return sections.map(section => {
-    const count = sectionCounters.get(section.type) || 0;
-    sectionCounters.set(section.type, count + 1);
-
-    const availableLyrics = parsedSections.get(section.type);
-    const lyrics = availableLyrics?.[count] || availableLyrics?.[0];
+  // Map parsed lyrics back to original sections in order
+  return sections.map((section, index) => {
+    // Try to find the corresponding parsed section
+    const sameTypeBefore = sections.slice(0, index).filter(s => s.type === section.type).length;
+    const expectedNumber = (sameTypeBefore + 1).toString();
+    
+    let matchedSection = parsedSections.find(p => 
+      p.type === section.type && p.number === expectedNumber
+    );
+    
+    // Fallback: try to find any section of the same type
+    if (!matchedSection) {
+      const availableSections = parsedSections.filter(p => p.type === section.type);
+      matchedSection = availableSections[sameTypeBefore] || availableSections[0];
+    }
 
     return {
       ...section,
-      lines: lyrics || getDefaultLines(section.type),
+      lines: matchedSection?.lines || getDefaultLines(section.type),
     };
   });
 }

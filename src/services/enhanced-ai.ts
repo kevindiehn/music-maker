@@ -147,6 +147,11 @@ export async function generateEnhancedLyrics(params: EnhancedGenerateLyricsParam
       mood: `${params.mood} with ${melodyAnalysis.musicalMood} musical energy`,
       // Add musical context to theme
       theme: `${params.theme} (expressed through ${melodyAnalysis.contour} melodies)`,
+      // Add anti-repetition emphasis for music-aware generation
+      sections: params.sections.map((section, index) => ({
+        ...section,
+        id: section.id + '_music_aware_' + index  // Ensure unique IDs
+      }))
     };
 
     console.log('🎵 Generating music-aware lyrics with context:', melodyAnalysis);
