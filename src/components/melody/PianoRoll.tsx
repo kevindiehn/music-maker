@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Note, SongSection } from '../../types';
 import { extractAllWords } from '../../services/syllables';
 
@@ -8,6 +9,13 @@ interface PianoRollProps {
   lyrics?: SongSection[];
 }
 
+const DURATIONS = [
+  { value: '16n', label: '16th', color: 'bg-red-500' },
+  { value: '8n', label: '8th', color: 'bg-orange-500' },
+  { value: '4n', label: '1/4', color: 'bg-blue-500' },
+  { value: '2n', label: '1/2', color: 'bg-green-500' },
+];
+
 const PIANO_NOTES = [
   'C5', 'B4', 'A4', 'G4', 'F4', 'E4', 'D4', 'C4',
   'B3', 'A3', 'G3', 'F3', 'E3', 'D3', 'C3'
@@ -16,6 +24,8 @@ const PIANO_NOTES = [
 const isBlackKey = (note: string) => note.includes('#');
 
 export function PianoRoll({ notes, onChange, bars = 4, lyrics = [] }: PianoRollProps) {
+  const [selectedDuration, setSelectedDuration] = useState('8n');
+  
   const beatsPerBar = 4;
   const totalBeats = bars * beatsPerBar;
   const subdivisions = 4; // 16th notes
@@ -42,7 +52,7 @@ export function PianoRoll({ notes, onChange, bars = 4, lyrics = [] }: PianoRollP
     } else {
       const newNote: Note = {
         pitch,
-        duration: '16n',
+        duration: selectedDuration as Note['duration'],
         startTime,
       };
       onChange([...notes, newNote]);
@@ -56,6 +66,24 @@ export function PianoRoll({ notes, onChange, bars = 4, lyrics = [] }: PianoRollP
 
   return (
     <div className="overflow-x-auto">
+      {/* Duration Selector */}
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-sm text-gray-400">Note Duration:</span>
+        {DURATIONS.map((duration) => (
+          <button
+            key={duration.value}
+            onClick={() => setSelectedDuration(duration.value)}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              selectedDuration === duration.value
+                ? `${duration.color} text-white`
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            {duration.label}
+          </button>
+        ))}
+      </div>
+
       <div className="inline-block min-w-full">
         {/* Header with beat numbers */}
         <div className="flex">
@@ -88,6 +116,11 @@ export function PianoRoll({ notes, onChange, bars = 4, lyrics = [] }: PianoRollP
               const isBarStart = cellIndex % (beatsPerBar * subdivisions) === 0;
               const isBeatStart = cellIndex % subdivisions === 0;
               const active = isNoteActive(pitch, cellIndex);
+              
+              // Find the note at this position to get its duration/color
+              const startTime = `0:${Math.floor(cellIndex / subdivisions)}:${(cellIndex % subdivisions) * (subdivisions / 4)}`;
+              const noteAtPosition = notes.find(n => n.pitch === pitch && n.startTime === startTime);
+              const noteDuration = noteAtPosition ? DURATIONS.find(d => d.value === noteAtPosition.duration) : null;
 
               return (
                 <div
@@ -101,7 +134,7 @@ export function PianoRoll({ notes, onChange, bars = 4, lyrics = [] }: PianoRollP
                       : 'border-l border-l-gray-700/50'
                   } ${
                     active
-                      ? 'bg-indigo-500 hover:bg-indigo-400'
+                      ? `${noteDuration?.color || 'bg-indigo-500'} hover:opacity-80`
                       : isBlackKey(pitch)
                       ? 'bg-gray-800 hover:bg-gray-700'
                       : 'bg-gray-750 hover:bg-gray-700'

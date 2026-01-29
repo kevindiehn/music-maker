@@ -17,7 +17,7 @@ import { ExportPanel } from './components/export/ExportPanel'
 import type { ProjectData } from './services/export'
 import { generateLyrics } from './services/ai'
 import { generateEnhancedLyrics } from './services/enhanced-ai'
-import { generateMelody } from './services/melody'
+import { generateMelody, generateMelodyForLyrics } from './services/melody'
 import { generateHarmony } from './services/harmony'
 import { useAudio } from './hooks/useAudio'
 
@@ -106,6 +106,12 @@ function App() {
       bars: melodyBars,
     })
     setMelodyNotes(notes)
+  }
+
+  const handleGenerateMelodyForLyrics = () => {
+    const allLyrics = lyricsState.sections.flatMap(section => section.lines);
+    const notes = generateMelodyForLyrics(melodyConfig, allLyrics, melodyBars);
+    setMelodyNotes(notes);
   }
 
   const handlePlayMelody = () => {
@@ -273,6 +279,14 @@ function App() {
                   >
                     Generate Melody
                   </button>
+                  {lyricsState.sections.some(s => s.lines.length > 0) && (
+                    <button
+                      onClick={handleGenerateMelodyForLyrics}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      🎤 Match Lyrics
+                    </button>
+                  )}
                   <button
                     onClick={() => setMelodyNotes([])}
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm font-medium transition-colors"
