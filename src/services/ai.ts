@@ -50,9 +50,9 @@ export async function generateLyrics(params: GenerateLyricsParams): Promise<Song
           }]
         }],
         generationConfig: {
-          temperature: 0.9,
-          topK: 40,
-          topP: 0.95,
+          temperature: 1.1,  // Higher creativity to avoid templates
+          topK: 50,
+          topP: 0.98,        // More diverse vocabulary
           maxOutputTokens: 2048,
         }
       })
@@ -109,6 +109,22 @@ ${hasMultipleChorus ? '- Each chorus should have slight variations - same theme 
 - NEVER copy and paste lines between sections
 - Each section must tell a unique part of the story
 - Vary vocabulary, imagery, and emotional angles
+
+🚫 BANNED PHRASES - NEVER USE THESE:
+- "Walking through the [anything]"
+- "I'm feeling [emotion]"
+- "Time will tell"  
+- "In my heart"
+- "Deep inside"
+- "Looking for"
+- "Searching for"
+- Generic weather metaphors (rain = sadness)
+
+✨ INSTEAD USE:
+- Specific sensory details (the smell of coffee, sound of gravel)
+- Action-based storytelling (she slams the door, engine won't start)
+- Concrete imagery (neon signs flickering, worn leather jacket)
+- Show don't tell emotions through actions/scenes
 
 Song structure:
 ${sectionDescriptions}
@@ -193,34 +209,38 @@ function generatePlaceholderLyrics(params: GenerateLyricsParams): SongSection[] 
 
 function getPlaceholderLines(
   sectionType: SongSection['type'],
-  params: { theme: string; mood: string }
+  _params: { theme: string; mood: string }
 ): string[] {
-  const placeholders: Record<string, string[]> = {
+  // Much more varied placeholder templates - NO "walking through" patterns
+  const placeholders: Record<string, string[][]> = {
     intro: [
-      `Here begins a tale of ${params.theme || 'dreams'}`,
-      `A ${params.mood || 'quiet'} melody unfolds`,
+      [`Shadows dance on empty walls`, `Something stirs within us all`],
+      [`The clock strikes twelve again`, `Time to face what lies ahead`],
+      [`Neon lights paint the street`, `Story starts where strangers meet`]
     ],
     verse: [
-      `Walking through the ${params.theme || 'night'} alone`,
-      `Feeling ${params.mood || 'lost'} without a home`,
-      `Searching for a sign to guide my way`,
-      `Hoping that tomorrow brings a brighter day`,
+      [`The coffee's cold, the morning's grey`, `Another chance has slipped away`, `But in the silence something grows`, `A strength that nobody else knows`],
+      [`She turns the key, the engine dies`, `Sees her reflection in his eyes`, `The radio plays their favorite song`, `Reminds her where she still belongs`],
+      [`Concrete jungle, steel and glass`, `Watching memories as they pass`, `The subway rattles underground`, `In chaos, peace can still be found`]
     ],
     chorus: [
-      `${params.theme || 'Dreams'} are calling out to me`,
-      `${params.mood || 'Free'} is all I want to be`,
-      `Rise up high and touch the sky`,
-      `Never gonna say goodbye`,
+      [`Break the chains that hold you down`, `Turn the silence into sound`, `Every scar becomes a crown`, `Rising up from broken ground`],
+      [`Like a phoenix from the ash`, `Nothing good was meant to last`, `But we'll build it up again`, `Stronger than we've ever been`],
+      [`In the darkness find the light`, `Every wrong can still be right`, `Take my hand and hold it tight`, `Together we can win this fight`]
     ],
     bridge: [
-      `But then I realize what matters most`,
-      `Is finding peace from coast to coast`,
+      [`The mirror shows a different face`, `Time has left its gentle trace`],
+      [`But if we learned to love again`, `Maybe we could start again`],
+      [`The pieces scattered on the floor`, `Could build something worth much more`]
     ],
     outro: [
-      `And so the story ends tonight`,
-      `Fading gently into light`,
+      [`The story ends but echoes on`, `In hearts where hope has never gone`],
+      [`And as the final notes decay`, `The melody will find its way`],
+      [`The curtain falls, the lights grow dim`, `But this is where we all begin`]
     ],
   };
 
-  return placeholders[sectionType] || [`[${sectionType} lyrics]`];
+  const templates = placeholders[sectionType] || [[`[${sectionType} lyrics]`]];
+  const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
+  return randomTemplate;
 }

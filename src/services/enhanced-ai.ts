@@ -140,13 +140,13 @@ export async function generateEnhancedLyrics(params: EnhancedGenerateLyricsParam
     // Analyze the melody to inform lyrics
     const melodyAnalysis = analyzeMelody(params.melody);
     
-    // Enhanced parameters with musical context
+    // Enhanced parameters with musical context + anti-repetition
     const enhancedParams = {
       ...params,
       // Modify mood based on musical analysis
-      mood: `${params.mood} with ${melodyAnalysis.musicalMood} musical energy`,
+      mood: `${params.mood} with ${melodyAnalysis.musicalMood} musical energy (NO generic "walking through" patterns!)`,
       // Add musical context to theme
-      theme: `${params.theme} (expressed through ${melodyAnalysis.contour} melodies)`,
+      theme: `${params.theme} (expressed through ${melodyAnalysis.contour} melodies) - use specific imagery not clichés`,
       // Add anti-repetition emphasis for music-aware generation
       sections: params.sections.map((section, index) => ({
         ...section,
