@@ -1,6 +1,19 @@
-import * as mm from '@magenta/music';
+// Lazy load Magenta only when needed to reduce bundle size
+// import * as mm from '@magenta/music';  
 import type { SongSection, Note } from '../types';
 import { generateLyrics } from './ai';  // Keep the original as fallback
+
+// Placeholder interface until we fully integrate Magenta
+interface INoteSequence {
+  notes?: Array<{
+    pitch: number;
+    startTime: number;
+    endTime: number;
+    velocity: number;
+  }>;
+  tempos?: Array<{ time: number; qpm: number }>;
+  totalTime?: number;
+}
 
 // Helper function to convert pitch notation to MIDI numbers
 function convertPitchToMidi(pitch: string): number {
@@ -31,8 +44,8 @@ interface EnhancedGenerateLyricsParams {
 }
 
 // Convert our note format to Magenta's NoteSequence format
-function convertToNoteSequence(notes: Note[], tempo: number = 120): mm.INoteSequence {
-  const noteSequence: mm.INoteSequence = {
+function convertToNoteSequence(notes: Note[], tempo: number = 120): INoteSequence {
+  const noteSequence: INoteSequence = {
     notes: [],
     tempos: [{ time: 0, qpm: tempo }],
     totalTime: 0,
@@ -59,7 +72,7 @@ function convertToNoteSequence(notes: Note[], tempo: number = 120): mm.INoteSequ
     // Convert pitch (C4 -> MIDI number) - using basic conversion for now
     const pitchNumber = convertPitchToMidi(note.pitch);
     
-    noteSequence.notes!.push({
+    noteSequence.notes?.push({
       pitch: pitchNumber,
       startTime,
       endTime,

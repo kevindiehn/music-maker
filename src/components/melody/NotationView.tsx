@@ -11,21 +11,9 @@ interface NotationViewProps {
 
 // Convert our pitch format (C4, D#5) to VexFlow format
 const convertPitch = (pitch: string): string => {
-  const note = pitch.slice(0, -1);
+  const note = pitch.slice(0, -1).replace('#', '#');
   const octave = pitch.slice(-1);
   return `${note.toLowerCase()}/${octave}`;
-};
-
-// Convert our duration format to VexFlow format  
-const convertDuration = (duration: string): string => {
-  switch (duration) {
-    case '1n': return 'w';     // whole note
-    case '2n': return 'h';     // half note
-    case '4n': return 'q';     // quarter note
-    case '8n': return '8';     // eighth note
-    case '16n': return '16';   // sixteenth note
-    default: return 'q';
-  }
 };
 
 export function NotationView({ notes, lyrics = [], playbackTime }: NotationViewProps) {
@@ -65,18 +53,23 @@ export function NotationView({ notes, lyrics = [], playbackTime }: NotationViewP
       stave.addClef('treble');
       stave.setContext(context).draw();
 
-      // Create VexFlow notes with lyrics
-      const vfNotes = sortedNotes.slice(0, 8).map((note, index) => { // Limit to 8 notes for demo
+      // Take first 4 quarter notes worth for a clean display
+      const maxNotes = 4;
+      const displayNotes = sortedNotes.slice(0, maxNotes);
+      
+      // Create VexFlow notes with lyrics - use all quarter notes for simplicity
+      const vfNotes = displayNotes.map((note, index) => {
         const vfNote = new StaveNote({
           keys: [convertPitch(note.pitch)],
-          duration: convertDuration(note.duration)
+          duration: 'q'  // Force quarter notes for now to avoid timing issues
         });
 
         // Add lyrics as annotation below the note
         const lyric = allWords[index];
         if (lyric) {
           const annotation = new Annotation(lyric)
-            .setVerticalJustification(Annotation.VerticalJustify.BOTTOM);
+            .setVerticalJustification(Annotation.VerticalJustify.BOTTOM)
+            .setFont('Times', 12);
           
           vfNote.addModifier(annotation);
         }
@@ -84,9 +77,18 @@ export function NotationView({ notes, lyrics = [], playbackTime }: NotationViewP
         return vfNote;
       });
 
+      // Pad with rests if needed to fill the measure
+      while (vfNotes.length < 4) {
+        vfNotes.push(new StaveNote({
+          keys: ['c/4'],
+          duration: 'qr'  // quarter rest
+        }));
+      }
+
       if (vfNotes.length > 0) {
-        // Create voice and add notes
+        // Create voice with exactly 4 beats
         const voice = new Voice({ numBeats: 4, beatValue: 4 });
+        voice.setStrict(false);  // Allow incomplete measures
         voice.addTickables(vfNotes);
 
         // Format and draw
