@@ -43,25 +43,37 @@ export function NotationView({ notes, lyrics = [], playbackTime }: NotationViewP
     }
 
     try {
-      // Create VexFlow renderer
+      // Create VexFlow renderer - wider for more notes
       const renderer = new Renderer(divRef.current, Renderer.Backends.SVG);
-      renderer.resize(800, 300);
+      renderer.resize(1000, 300);
       const context = renderer.getContext();
 
-      // Create stave
-      const stave = new Stave(10, 40, 700);
+      // Create stave - wider to fit more notes
+      const stave = new Stave(10, 40, 950);
       stave.addClef('treble');
       stave.setContext(context).draw();
 
-      // Take first 4 quarter notes worth for a clean display
-      const maxNotes = 4;
+      // Show more notes - up to 12 notes across 3 measures  
+      const maxNotes = Math.min(sortedNotes.length, 12);
       const displayNotes = sortedNotes.slice(0, maxNotes);
       
-      // Create VexFlow notes with lyrics - use all quarter notes for simplicity
+      // Convert durations properly
+      const convertDuration = (duration: string): string => {
+        switch (duration) {
+          case '1n': return 'w';     // whole note
+          case '2n': return 'h';     // half note
+          case '4n': return 'q';     // quarter note
+          case '8n': return '8';     // eighth note
+          case '16n': return '16';   // sixteenth note
+          default: return 'q';
+        }
+      };
+      
+      // Create VexFlow notes with lyrics using actual durations
       const vfNotes = displayNotes.map((note, index) => {
         const vfNote = new StaveNote({
           keys: [convertPitch(note.pitch)],
-          duration: 'q'  // Force quarter notes for now to avoid timing issues
+          duration: convertDuration(note.duration)  // Use actual durations
         });
 
         // Add lyrics as annotation below the note
@@ -77,22 +89,27 @@ export function NotationView({ notes, lyrics = [], playbackTime }: NotationViewP
         return vfNote;
       });
 
-      // Pad with rests if needed to fill the measure
-      while (vfNotes.length < 4) {
-        vfNotes.push(new StaveNote({
-          keys: ['c/4'],
-          duration: 'qr'  // quarter rest
-        }));
-      }
-
       if (vfNotes.length > 0) {
-        // Create voice with exactly 4 beats
-        const voice = new Voice({ numBeats: 4, beatValue: 4 });
-        voice.setStrict(false);  // Allow incomplete measures
+        // Calculate total beats needed
+        const beatMap: Record<string, number> = {
+          'w': 4, 'h': 2, 'q': 1, '8': 0.5, '16': 0.25
+        };
+        
+        const totalBeats = vfNotes.reduce((sum, note) => {
+          const duration = note.getDuration();
+          return sum + (beatMap[duration] || 1);
+        }, 0);
+        
+        // Create voice with flexible beat count (round up to nearest whole number)
+        const voice = new Voice({ 
+          numBeats: Math.max(4, Math.ceil(totalBeats)), 
+          beatValue: 4 
+        });
+        voice.setStrict(false);  // Allow flexible timing
         voice.addTickables(vfNotes);
 
-        // Format and draw
-        new Formatter().joinVoices([voice]).format([voice], 600);
+        // Format and draw with wider spacing
+        new Formatter().joinVoices([voice]).format([voice], 900);
         voice.draw(context, stave);
       }
 
