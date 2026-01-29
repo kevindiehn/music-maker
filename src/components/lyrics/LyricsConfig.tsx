@@ -1,3 +1,5 @@
+import { generateRandomTopic } from '../../services/topics';
+
 interface LyricsConfigProps {
   config: {
     theme: string;
@@ -17,12 +19,31 @@ export function LyricsConfig({ config, onChange }: LyricsConfigProps) {
     onChange({ ...config, [field]: value });
   };
 
+  const handleSurpriseMe = () => {
+    const randomTopic = generateRandomTopic();
+    onChange({
+      ...config,
+      theme: randomTopic.theme,
+      mood: randomTopic.mood,
+      genre: randomTopic.genre
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">
-          Theme / Topic
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium text-gray-300">
+            Theme / Topic
+          </label>
+          <button
+            type="button"
+            onClick={handleSurpriseMe}
+            className="px-3 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-1"
+          >
+            🎲 Surprise Me
+          </button>
+        </div>
         <input
           type="text"
           value={config.theme}
